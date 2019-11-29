@@ -1,0 +1,5 @@
+
+# to create CA,kubeconfig etc.
+- hosts: localhost
+  roles:
+  - tls

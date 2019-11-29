@@ -1,0 +1,34 @@
+# to install Pod network,only one can be choosen.
+- hosts:
+  - kube_master
+  - kube_worker
+  roles:
+  - { role: calico, when: "CLUSTER_NETWORK == 'calico'" }
+  - { role: flannel, when: "CLUSTER_NETWORK == 'flannel'" }
+
+- hosts:
+  - kube_master
+  tasks: 
+  - name: Making master nodes SchedulingDisabled
+    shell: "{{ bin_dir }}/kubectl cordon {{ inventory_hostname }} "
+    when: "inventory_hostname not in groups['kube_worker']"
+    ignore_errors: true
+
+  - name: Setting master role name 
+    shell: "{{ bin_dir }}/kubectl label node {{ inventory_hostname }} node-role.kubernetes.io/master= --overwrite"
+    ignore_errors: true
+
+- hosts:
+  - kube_worker
+  tasks: 
+#  - name: Setting worker role name 
+#    shell: "{{ bin_dir }}/kubectl label node {{ inventory_hostname }} node-role.kubernetes.io/node= --overwrite"
+#    ignore_errors: true  
+ 
+  - name: check kube-master service
+    command: "{{ bin_dir }}/kubectl get node"
+    register: result
+    until: result.rc == 0
+    retries:  3
+    delay: 15
+    ignore_errors: true

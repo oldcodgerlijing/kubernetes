@@ -1,0 +1,3 @@
+- hosts: kube_worker
+  roles:
+  - nginx

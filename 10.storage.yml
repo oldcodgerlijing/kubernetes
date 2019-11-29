@@ -1,0 +1,5 @@
+# to install cluster storage 
+- hosts:
+  - kube_worker
+  roles:
+  - storage
