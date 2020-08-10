@@ -1,0 +1,5 @@
+- name: 创建集群证书
+  hosts: 
+  - "{{ groups['kube_master'][0] }}"
+  roles:
+  - tls
