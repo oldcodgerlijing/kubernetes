@@ -1,5 +1,0 @@
-# to install dashboard
-- hosts:
-  - kube_master
-  roles:
-  - dashboard
