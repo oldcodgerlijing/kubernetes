@@ -1,0 +1,38 @@
+# ================创建集群kube-worker节点证书和私钥=====================
+- name: 准备相关证书签名请求文件
+  template: src={{ item }}.j2 dest={{ tls_dir }}/{{ item }}
+  with_items: 
+  - kube-proxy-csr.json
+
+- name: 创建kube-proxy客户端及服务端证书和私钥（属对等证书）
+  shell: "cd {{ tls_dir }} && {{ bin_dir }}/cfssl gencert \
+        -ca=ca.pem \
+        -ca-key=ca-key.pem \
+        -config=ca-config.json \
+        -profile=kubernetes kube-proxy-csr.json | {{ bin_dir }}/cfssljson -bare kube-proxy"
+
+# ===================创建集群kubeconfig文件=======================
+#------创建集群kube-proxy.kubeconfig文件 ------- 
+- name: 为kube-proxy.kubeconfig设置集群参数
+  shell: "cd {{ tls_dir }} && {{ bin_dir }}/kubectl config set-cluster kubernetes \
+        --certificate-authority=ca.pem \
+        --embed-certs=true \
+        --server={{ KUBE_APISERVER }} \
+        --kubeconfig=kube-proxy.kubeconfig"
+
+- name: 为kube-proxy.kubeconfig设置客户端认证参数
+  shell: "cd {{ tls_dir }} && {{ bin_dir }}/kubectl config set-credentials kube-proxy \
+        --client-certificate=kube-proxy.pem \
+        --client-key=kube-proxy-key.pem \
+        --embed-certs=true \
+        --kubeconfig=kube-proxy.kubeconfig"
+
+- name: 为kube-proxy.kubeconfig设置上下文参数
+  shell: "cd {{ tls_dir }} && {{ bin_dir }}/kubectl config set-context default \
+        --cluster=kubernetes \
+        --user=kube-proxy \
+        --kubeconfig=kube-proxy.kubeconfig"
+
+- name: 为kube-proxy.kubeconfig选择默认上下文
+  shell: "cd {{ tls_dir }} && {{ bin_dir }}/kubectl config use-context default \
+        --kubeconfig=kube-proxy.kubeconfig"

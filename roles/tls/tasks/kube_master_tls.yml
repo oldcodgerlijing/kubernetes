@@ -1,0 +1,112 @@
+# ================创建集群kube-master节点证书和私钥=====================
+- name: 准备相关证书签名请求文件
+  template: src={{ item }}.j2 dest={{ tls_dir }}/{{ item }}
+  with_items: 
+  - admin-csr.json
+  - aggregator-proxy-csr.json
+  - kube-controller-manager-csr.json
+  - kube-scheduler-csr.json
+
+- name: 创建集群admin客户端证书和私钥
+  shell: "cd {{ tls_dir }} && {{ bin_dir }}/cfssl gencert \
+        -ca=ca.pem \
+        -ca-key=ca-key.pem \
+        -config=ca-config.json \
+        -profile=kubernetes admin-csr.json | {{ bin_dir }}/cfssljson -bare admin" 
+
+- name: 为数据采集代理(aggregator-proxy)创建访问metrics-server时的客户端证书和私钥
+  shell: "cd {{ tls_dir }} && {{ bin_dir }}/cfssl gencert \
+        -ca=ca.pem \
+        -ca-key=ca-key.pem \
+        -config=ca-config.json \
+        -profile=kubernetes aggregator-proxy-csr.json | {{ bin_dir }}/cfssljson -bare aggregator-proxy"
+
+- name: 创建 kube-controller-manager客户端及服务端证书和私钥（属对等证书）
+  shell: "cd {{ tls_dir }} && {{ bin_dir }}/cfssl gencert \
+        -ca=ca.pem \
+        -ca-key=ca-key.pem \
+        -config=ca-config.json \
+        -profile=kubernetes kube-controller-manager-csr.json | {{ bin_dir }}/cfssljson -bare kube-controller-manager"
+
+- name: 创建 kube-scheduler客户端及服务端证书和私钥（属对等证书）
+  shell: "cd {{ tls_dir }} && {{ bin_dir }}/cfssl gencert \
+        -ca=ca.pem \
+        -ca-key=ca-key.pem \
+        -config=ca-config.json \
+        -profile=kubernetes kube-scheduler-csr.json | {{ bin_dir }}/cfssljson -bare kube-scheduler"
+
+# ===================创建集群kubeconfig文件=======================
+#------创建集群kubectl.kubeconfig文件 ------- 
+- name: 为kubectl.kubeconfig设置集群参数
+  shell: "cd {{ tls_dir }} && {{ bin_dir }}/kubectl config set-cluster {{ CLUSTER_NAME }} \
+        --certificate-authority=ca.pem \
+        --embed-certs=true \
+        --server={{ KUBE_APISERVER }} \
+        --kubeconfig=kubectl.kubeconfig"
+
+- name: 为kubectl.kubeconfig设置客户端认证参数
+  shell: "cd {{ tls_dir }} && {{ bin_dir }}/kubectl config set-credentials admin \
+        --client-certificate=admin.pem \
+        --client-key=admin-key.pem \
+        --embed-certs=true \
+        --kubeconfig=kubectl.kubeconfig"
+
+- name: 为kubectl.kubeconfig设置上下文参数
+  shell: "cd {{ tls_dir }} && {{ bin_dir }}/kubectl config set-context {{ CLUSTER_NAME }} \
+        --cluster={{ CLUSTER_NAME }} \
+        --user=admin \
+        --kubeconfig=kubectl.kubeconfig"
+
+- name: 为kubectl.kubeconfig选择默认上下文
+  shell: "cd {{ tls_dir }} && {{ bin_dir }}/kubectl config use-context {{ CLUSTER_NAME }} \
+        --kubeconfig=kubectl.kubeconfig"
+
+#------创建集群kube-controller-manager.kubeconfig文件 ------- 
+- name: 为kube-controller-manager.kubeconfig设置集群参数
+  shell: "cd {{ tls_dir }} && {{ bin_dir }}/kubectl config set-cluster kubernetes \
+        --certificate-authority=ca.pem \
+        --embed-certs=true \
+        --server={{ KUBE_APISERVER }} \
+        --kubeconfig=kube-controller-manager.kubeconfig"
+
+- name: 为kube-controller-manager.kubeconfig设置认证参数
+  shell: "cd {{ tls_dir }} && {{ bin_dir }}/kubectl config set-credentials system:kube-controller-manager \
+        --client-certificate=kube-controller-manager.pem \
+        --client-key=kube-controller-manager-key.pem \
+        --embed-certs=true \
+        --kubeconfig=kube-controller-manager.kubeconfig"
+
+- name: 为kube-controller-manager.kubeconfig设置上下文参数
+  shell: "cd {{ tls_dir }} && {{ bin_dir }}/kubectl config set-context default \
+        --cluster=kubernetes \
+        --user=system:kube-controller-manager \
+        --kubeconfig=kube-controller-manager.kubeconfig"
+
+- name: 为kube-controller-manager.kubeconfig选择默认上下文
+  shell: "cd {{ tls_dir }} && {{ bin_dir }}/kubectl config use-context default \
+        --kubeconfig=kube-controller-manager.kubeconfig"
+
+#------创建集群kube-scheduler.kubeconfig文件 ------- 
+- name: 为kube-scheduler.kubeconfig设置集群参数
+  shell: "cd {{ tls_dir }} && {{ bin_dir }}/kubectl config set-cluster kubernetes \
+        --certificate-authority=ca.pem \
+        --embed-certs=true \
+        --server={{ KUBE_APISERVER }} \
+        --kubeconfig=kube-scheduler.kubeconfig"
+
+- name: 为kube-scheduler.kubeconfig设置认证参数
+  shell: "cd {{ tls_dir }} && {{ bin_dir }}/kubectl config set-credentials system:kube-scheduler \
+        --client-certificate=kube-scheduler.pem \
+        --client-key=kube-scheduler-key.pem \
+        --embed-certs=true \
+        --kubeconfig=kube-scheduler.kubeconfig"
+
+- name: 为kube-scheduler.kubeconfig设置上下文参数
+  shell: "cd {{ tls_dir }} && {{ bin_dir }}/kubectl config set-context default \
+        --cluster=kubernetes \
+        --user=system:kube-scheduler \
+        --kubeconfig=kube-scheduler.kubeconfig"
+
+- name: 为kube-scheduler.kubeconfig选择默认上下文
+  shell: "cd {{ tls_dir }} && {{ bin_dir }}/kubectl config use-context default \
+        --kubeconfig=kube-scheduler.kubeconfig"

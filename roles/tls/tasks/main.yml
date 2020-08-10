@@ -1,0 +1,43 @@
+# ---------------准备集群相关证书和密钥---------------- 
+- name: 分发kubectl工具
+  copy: src={{ base_dir }}/pkgs/kubernetes/bin/{{ item }} dest={{ bin_dir }}/{{ item }} mode=0755
+  with_items:
+  - kubectl
+
+- name: 准备CA配置文件和相关证书签名请求文件
+  template: src={{ item }}.j2 dest={{ tls_dir }}/{{ item }}
+  with_items:
+  - ca-config.json
+  - ca-csr.json
+  
+- name: 生成集群CA证书和私钥
+  shell: "cd {{ tls_dir }} && {{ bin_dir }}/cfssl gencert -initca ca-csr.json | {{ bin_dir }}/cfssljson -bare ca" 
+
+# 创建ETCD证书和私钥（属对等证书）
+- import_tasks: etcd_tls.yml
+
+# 创建kube_master证书和私钥（属对等证书），以及相关kubeconfig文件
+- import_tasks: kube_master_tls.yml
+
+# 创建kube_worker证书和私钥（属对等证书），以及相关kubeconfig文件
+- import_tasks: kube_worker_tls.yml
+
+# 创建其它证书和私钥（属对等证书），以及相关kubeconfig文件
+- import_tasks: other_tls.yml
+
+# -----------保存集群相关证书和密钥到Ansible部署平台---------------- 
+- name: 打包为集群创建的相关证书和密钥
+  shell: "cd {{ tls_dir }} && tar -zcf tls.tar.gz * --exclude=*.gz" 
+  ignore_errors: true
+
+- name: 拉取集群证书tar文件
+  fetch:
+    src: "{{ tls_dir }}/tls.tar.gz"
+    dest: /etc/ansible/tls/
+    flat: yes
+  ignore_errors: true
+
+- name: 提取集群创建的相关证书和密钥
+  shell: "cd /etc/ansible/tls && tar -zxf tls.tar.gz"
+  delegate_to: localhost
+  ignore_errors: true

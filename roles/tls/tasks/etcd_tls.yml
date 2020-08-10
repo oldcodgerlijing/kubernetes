@@ -1,0 +1,10 @@
+- name: 准备ETCD证书签名请求
+  template: src=etcd-csr.json.j2 dest={{ tls_dir }}/etcd-csr.json
+
+- name: 创建ETCD客户端及服务端证书和私钥（属对等证书）
+  shell: "cd {{ tls_dir }} && {{ bin_dir }}/cfssl gencert \
+        -ca=ca.pem \
+        -ca-key=ca-key.pem \
+        -config=ca-config.json \
+        -profile=kubernetes etcd-csr.json | {{ bin_dir }}/cfssljson -bare etcd"
+ 

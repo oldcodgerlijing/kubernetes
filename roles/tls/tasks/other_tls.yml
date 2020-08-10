@@ -1,0 +1,11 @@
+- name: 准备相关证书签名请求文件
+  template: src={{ item }}.j2 dest={{ tls_dir }}/{{ item }}
+  with_items: 
+  - calico-csr.json
+
+- name: 创建calico客户端证书证书及私钥
+  shell: "cd {{ tls_dir }} && {{ bin_dir }}/cfssl gencert \
+        -ca=ca.pem \
+        -ca-key=ca-key.pem \
+        -config=ca-config.json \
+        -profile=kubernetes calico-csr.json | {{ bin_dir }}/cfssljson -bare calico"
