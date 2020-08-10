@@ -1,5 +1,0 @@
-# to set up 'kube_worker' nodes
-- hosts: kube_worker
-  roles:
-  - role: kube_worker 
-
