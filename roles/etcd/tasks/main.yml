@@ -1,0 +1,32 @@
+- name: 准备目标文件夹
+  file: name=/var/lib/etcd/default.etcd state=directory
+
+- name: 推送etcd二进制文件
+  copy: src={{ base_dir }}/pkgs/etcd/{{ item }} dest={{ bin_dir }}/{{ item }} mode=0755
+  with_items:
+  - etcd
+  - etcdctl
+
+- name: 推送ETCD证书
+  copy: src={{ base_dir }}/tls/{{ item }} dest={{ tls_dir }}/{{ item }}
+  with_items:
+  - ca.pem
+  - ca-key.pem
+  - etcd.pem
+  - etcd-key.pem
+
+- name: 创建etcd的systemd unit文件
+  template: src=etcd.service.j2 dest=/etc/systemd/system/etcd.service
+
+- name: 启动ETCD服务
+  shell: "systemctl daemon-reload && systemctl start etcd && systemctl enable etcd"
+  ignore_errors: true
+
+- name: 以轮询的方式等待服务同步完成
+  shell: "systemctl status etcd.service|grep Active"
+  register: etcd_status
+  until: '"running" in etcd_status.stdout'
+  retries: 15
+  delay: 5
+  ignore_errors: true
+  
