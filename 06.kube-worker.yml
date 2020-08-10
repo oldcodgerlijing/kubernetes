@@ -1,0 +1,6 @@
+- name: 部署Worker节点
+  hosts: 
+  - kube_worker
+  roles: 
+  - kubernetes/worker
+  - kubernetes/label
