@@ -1,0 +1,12 @@
+# 设置时间源服务器。建议为ntp1.aliyun.com，无外网时使用本机
+ntp_server: "localhost"
+
+# 设置允许时间同步的内部网络段，比如"10.0.0.0/8"，默认全部允许：
+local_network: "0.0.0.0/0"
+
+# 设置加载的nf_conntrack模块：
+nf_conntrack_module: "{%- if ansible_kernel is version('4.19', '>=') -%}
+                        nf_conntrack
+                      {%- else -%}
+                        nf_conntrack_ipv4
+                      {%- endif -%}"
