@@ -1,6 +1,0 @@
-# prepare tasks for all nodes
-- hosts:
-  - kube_master
-  - kube_worker
-  roles:
-  - hosts
