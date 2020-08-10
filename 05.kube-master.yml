@@ -1,0 +1,9 @@
+- name: 部署Master节点
+  hosts: 
+  - kube_master
+  gather_facts: true
+  roles: 
+  - { role: kubernetes/loadbalance, when: "KUBE_APISERVER_IP != groups['kube_master'][0]" }
+  - kubernetes/master
+  - kubernetes/worker
+  - kubernetes/label
