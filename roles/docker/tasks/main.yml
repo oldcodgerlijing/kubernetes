@@ -1,0 +1,41 @@
+- name: 准备目标文件夹
+  file: name=/etc/docker state=directory
+
+- name: 推送Docker二进制文件
+  copy: src={{ base_dir }}/pkgs/docker/ dest={{ bin_dir }}/ mode=0755
+
+- name: 配置Docker引擎
+  template: src=daemon.json.j2 dest=/etc/docker/daemon.json
+
+- name: 为Docker添加命令自动补全脚本
+  copy: src=docker dest=/etc/bash_completion.d/docker mode=0755
+
+- name: flush-iptables
+  shell: "iptables -P INPUT ACCEPT \
+       && iptables -F && iptables -X \
+       && iptables -F -t nat && iptables -X -t nat \
+       && iptables -F -t raw && iptables -X -t raw \
+       && iptables -F -t mangle && iptables -X -t mangle"
+
+- name: 创建Docker的启动文件
+  template: src=docker.service.j2 dest=/etc/systemd/system/docker.service
+
+- name: 设置Docker开机启动
+  shell: systemctl enable docker
+  ignore_errors: true
+
+- name: 启动Docker服务
+  shell: systemctl daemon-reload && systemctl start docker
+
+- name: 轮询等待docker服务运行
+  shell: "systemctl status docker.service|grep Active"
+  register: docker_status
+  until: '"running" in docker_status.stdout'
+  retries: 15
+  delay: 5
+  ignore_errors: true
+
+- name: 设置Docker 命令软链接
+  file: src={{ bin_dir }}/docker dest=/usr/bin/docker state=link
+  ignore_errors: true
+  
