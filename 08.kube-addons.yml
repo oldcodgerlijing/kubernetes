@@ -1,0 +1,10 @@
+- name: 部署Kubernetes附件
+  hosts:
+  - kube_master 
+  - kube_worker
+  roles:
+  - kube-addons/images
+  - kube-addons/coredns
+  - kube-addons/metrics_server
+  - kube-addons/nginx_ingress
+  - kube-addons/dashboard
