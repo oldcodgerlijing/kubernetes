@@ -1,0 +1,2 @@
+# etcd 集群节点地址列表, 根据etcd组成员自动生成
+ETCD_NODES: "{% for host in groups['etcd'] %}{{ hostvars[host]['NODE_NAME'] }}=https://{{ host }}:2380{% if not loop.last %},{% endif %}{% endfor %}"
