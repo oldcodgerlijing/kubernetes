@@ -1,0 +1,19 @@
+# -------配置内核加载IPVS模块------------------------
+- name: 临时加载IPVS内核模块
+  modprobe: name={{ item }} state=present
+  with_items:
+    - ip_vs
+    - ip_vs_rr
+    - ip_vs_sh
+    - ip_vs_wrr
+  ignore_errors: true
+
+- name: 配置开机加载的内核模块
+  template: src=11-k8s-modules-ipvs.conf.j2 dest=/etc/modules-load.d/11-k8s-modules-ipvs.conf
+
+- name: 定义内核运行参数
+  template: src=96-k8s-sysctl-ipvs.conf.j2 dest=/etc/sysctl.d/96-k8s-sysctl-ipvs.conf
+
+- name: 设置内核运行参数
+  shell: "sysctl -p /etc/sysctl.d/96-k8s-sysctl-ipvs.conf"
+  ignore_errors: true

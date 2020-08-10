@@ -1,0 +1,25 @@
+- name: 配置时区 
+  shell: timedatectl set-timezone Asia/Shanghai
+  ignore_errors: true
+  
+- block:
+  - name: 配置chrony server 
+    template: src=chrony-server.conf.j2 dest=/etc/chrony.conf
+    ignore_errors: true
+
+  - name: 启动chrony server
+    shell: "systemctl daemon-reload && systemctl restart chronyd"
+    ignore_errors: true
+
+  when: "inventory_hostname == groups['kube_master'][0]"
+
+- block:
+  - name: 配置chrony client
+    template: src=chrony-client.conf.j2 dest=/etc/chrony.conf
+    ignore_errors: true
+    
+  - name: 启动chrony client 
+    shell: "systemctl daemon-reload && systemctl restart chronyd"
+    ignore_errors: true
+    
+  when: "inventory_hostname != groups['kube_master'][0]"

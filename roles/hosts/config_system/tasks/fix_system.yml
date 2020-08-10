@@ -1,0 +1,63 @@
+# ---------修补系统软件------------------------
+- name: 复制系统修补软件包
+  copy: src={{ base_dir }}/pkgs/hosts/patch/ dest=/opt/kubernetes/host_patch/
+
+- name: 安装系统修补软件包
+  shell: "cd /opt/kubernetes/host_patch && rpm -ivhU *  --nodeps --force"
+
+# ---------修补系统安全漏洞---------------
+- name: 把SCTP列入内核模块黑名单
+  copy: src=sctp.conf dest=/etc/modprobe.d/sctp.conf
+  
+# -------配置内核加载模块------------------------
+- name: 临时加载内核模块
+  modprobe: name={{ item }} state=present
+  with_items:
+    - br_netfilter
+    - "{{ nf_conntrack_module }}"
+#    - ipip
+
+- name: 开启systemd自动加载模块服务
+  service: name=systemd-modules-load enabled=yes
+  
+- name: 配置开机加载的内核模块
+  template: src=10-k8s-modules.conf.j2 dest=/etc/modules-load.d/10-k8s-modules.conf
+
+# -------设置内核运行参数------------------
+- name: 定义内核运行参数
+  template: src=95-k8s-sysctl.conf.j2 dest=/etc/sysctl.d/95-k8s-sysctl.conf
+
+- name: 设置内核运行参数
+  shell: "sysctl -p /etc/sysctl.d/95-k8s-sysctl.conf"
+  ignore_errors: true
+
+# ---------修改系统资源限制---------------
+- name: 创建systemd配置文件目录
+  file: name=/etc/systemd/system.conf.d state=directory  
+
+- name: 定义系统资源limits项
+  template: src=30-k8s-ulimits.conf.j2 dest=/etc/systemd/system.conf.d/30-k8s-ulimits.conf
+
+- name: 修改系统资源限制
+  shell: "systemctl daemon-reexec"
+# 注：修改了/etc/systemd/system.conf以后，必须使用systemctl daemon-reexec，
+# 因为daemon-reload重新加载的是所有单元文件,而不是systemd自身的配置。
+
+# -------------优化日志设置-----------------------
+# 优化设置 journal 日志相关，避免日志重复搜集，浪费系统资源
+- name: 禁止rsyslog获取journald日志1
+  lineinfile:
+    dest: /etc/rsyslog.conf
+    state: present
+    regexp: 'ModLoad imjournal'
+    line: '#$ModLoad imjournal # provides access to the systemd journal'
+
+- name: 禁止rsyslog获取journald日志2
+  lineinfile:
+    dest: /etc/rsyslog.conf
+    state: present
+    regexp: 'IMJournalStateFile'
+    line: '#$IMJournalStateFile imjournal.state'
+
+- name: 重启rsyslog服务
+  service: name=rsyslog state=restarted

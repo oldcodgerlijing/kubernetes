@@ -1,0 +1,35 @@
+# -------------关闭防火墙运行-----------------------
+- name: 禁用NetworkManager
+  shell: "systemctl stop NetworkManager && systemctl disable NetworkManager"
+  ignore_errors: true
+
+- name: 禁用Firewall
+  shell: "systemctl stop firewalld && systemctl disable firewalld"
+  ignore_errors: true
+
+# -------------关闭Selinux运行-----------------------
+- name: 临时关闭Selinux
+  shell: "setenforce 0"
+  failed_when: false
+
+- name: 永久关闭Selinux
+  lineinfile:
+    dest: /etc/selinux/config
+    regexp: "^SELINUX="
+    line: "SELINUX=disabled"  
+
+# -------------关闭内存交换-----------------------
+- name: 禁用系统 swap
+  shell: "swapoff -a && sysctl -w vm.swappiness=0"
+  ignore_errors: true
+- name: 删除fstab swap 相关配置
+  lineinfile:
+    path: /etc/fstab
+    regexp: 'swap'
+    state: absent
+    backup: 'yes'
+
+# -------------关闭邮件服务-----------------------
+- name: 禁用无关的邮件服务
+  shell: "systemctl stop postfix && systemctl disable postfix"
+  ignore_errors: true

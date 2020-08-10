@@ -1,0 +1,16 @@
+- name: 重置集群节点hosts文件
+  shell: 'echo "127.0.0.1 localhost localhost.localdomain" > /etc/hosts'
+  ignore_errors: true
+    
+- name: 重置集群节点的hosts文件
+  shell: echo "{{ inventory_hostname }} {{ hostvars[inventory_hostname]['NODE_NAME'] }}" >> /etc/hosts
+  ignore_errors: true
+  
+- name: 重置集群节点的resolv.conf文件
+  shell: cat /dev/null > /etc/resolv.conf
+  ignore_errors: true
+
+- name: 重置集群节点的网络
+  shell: systemctl restart network
+  ignore_errors: true
+  
