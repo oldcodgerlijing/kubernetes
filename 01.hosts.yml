@@ -1,0 +1,7 @@
+- name: 准备集群宿主机
+  hosts:
+  - kube_master
+  - kube_worker
+  gather_facts: true
+  roles:
+  - hosts/config_system
